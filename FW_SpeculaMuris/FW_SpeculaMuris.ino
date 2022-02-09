@@ -27,7 +27,7 @@ TwoWire I2Cone = TwoWire(1);
 #define GYRO_PERCENTAGE 0.96
 #define ACC_PERCENTAGE (1-GYRO_PERCENTAGE)
 
-#define MOUSE_SENSITIVITY 10
+#define MOUSE_SENSITIVITY 1000
 
 typedef struct 
 {
@@ -71,8 +71,8 @@ void setup(void) {
 
   bleMouse.begin();
 
-  mpu_converter.previous_gyro_x = 0.0; // Inserir erro
-  mpu_converter.previous_gyro_y = 0.0; // Inserir erro
+  mpu_converter.previous_gyro_x = -0.02; // Inserir erro
+  mpu_converter.previous_gyro_y = 0.04; // Inserir erro
   
   Serial.println("Setup finish!");
   Serial.println("MPU6050 OLED demo init");
@@ -109,35 +109,45 @@ void loop() {
   float mouse_var_x = get_mouse_variation_x(&mpu_converter, g.gyro.x, a.acceleration.x, ELAPSED_TIME);
   float mouse_var_y = get_mouse_variation_y(&mpu_converter, g.gyro.y, a.acceleration.y, ELAPSED_TIME);
 
+  Serial.print("g gyro x: ");
+  Serial.println(g.gyro.x);
   Serial.print("Variação Mouse X: ");
   Serial.println(mouse_var_x);
   Serial.print("Variação Mouse Y: ");
   Serial.println(mouse_var_y);
   Serial.println("");
+
+
   
-  delay(500);
+
+  bleMouse.move(mouse_var_x,mouse_var_y);
+  
+  delay(ELAPSED_TIME*1000);
 }
 
 // Implementação funções auxiliares
 
 float get_mouse_variation_x(MPU_INPUT_CONVERTER* mpu_converter, float gyro_x_rad_sec, float acc_x_rad_sec, float elapsed_time) {
 
-  float new_gyro_x = mpu_converter->previous_gyro_x + gyro_x_rad_sec * elapsed_time;
+  float corrected_gyro_x = gyro_x_rad_sec - mpu_converter->previous_gyro_x;
 
-  mpu_converter->previous_gyro_x = new_gyro_x;
+  Serial.print("gyro_x_rad_sec: ");
+  Serial.println(gyro_x_rad_sec);
+  Serial.print("corrected_gyro_x: ");
+  Serial.println(corrected_gyro_x);
 
-  float variation = (new_gyro_x * GYRO_PERCENTAGE) + (acc_x_rad_sec * ACC_PERCENTAGE);
+  float variation = (corrected_gyro_x * GYRO_PERCENTAGE * elapsed_time) + (acc_x_rad_sec * ACC_PERCENTAGE * elapsed_time);
 
   return variation * MOUSE_SENSITIVITY;
 }
 
 float get_mouse_variation_y(MPU_INPUT_CONVERTER* mpu_converter, float gyro_y_rad_sec, float acc_y_rad_sec, float elapsed_time) {
 
-  float new_gyro_y = mpu_converter->previous_gyro_y + gyro_y_rad_sec * elapsed_time;
+  float corrected_gyro_y =  gyro_y_rad_sec - mpu_converter->previous_gyro_y;
 
-  mpu_converter->previous_gyro_y = new_gyro_y;
+  
 
-  float variation = (new_gyro_y * GYRO_PERCENTAGE) + (acc_y_rad_sec * ACC_PERCENTAGE);
+  float variation = (corrected_gyro_y * GYRO_PERCENTAGE * elapsed_time) + (acc_y_rad_sec * ACC_PERCENTAGE * elapsed_time);
 
   return variation * MOUSE_SENSITIVITY;
 }
